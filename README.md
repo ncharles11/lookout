@@ -137,8 +137,8 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
-    SERVICES ||--o{ METRICS : logs
-    SERVICES ||--o{ AGENT_KEYS : has
+    SERVICES ||--o{ METRICS : logs}
+    SERVICES ||--o{ AGENT_KEYS : has}
 
     SERVICES {
         uuid id PK
