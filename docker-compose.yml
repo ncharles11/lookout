@@ -6,8 +6,6 @@ services:
       POSTGRES_DB: lookout
       POSTGRES_USER: lookout
       POSTGRES_PASSWORD: lookout
-    ports:
-      - "5432:5432"
     volumes:
       - ./docker/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - pgdata:/var/lib/postgresql/data
@@ -26,11 +24,29 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://lookout:lookout@db:5432/lookout
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: lookout-frontend
+    depends_on:
+      - backend
+
+  proxy:
+    image: caddy:2-alpine
+    container_name: lookout-proxy
+    depends_on:
+      - backend
+      - frontend
     ports:
-      - "8000:8000"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - "80:80"
     volumes:
-      - ./backend:/app
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

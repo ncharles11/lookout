@@ -24,6 +24,16 @@ class TransitionResult:
     events: list[AlertEvent] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class AlertStateUpdate:
+    """Flattened FSM output consumed by the repository's atomic callback."""
+    new_state: ServiceState
+    consecutive_failures: int
+    consecutive_successes: int
+    failure_start: datetime | None
+    events: list[AlertEvent] = field(default_factory=list)
+
+
 def transition(
     service_id: UUID,
     service_name: str,

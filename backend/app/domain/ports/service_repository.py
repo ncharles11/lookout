@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import datetime
 from uuid import UUID
 
+from app.domain.alerting.state_machine import AlertStateUpdate
 from app.domain.models import Service, ServiceCreate, ServiceState
 
 
@@ -55,4 +57,19 @@ class ServiceRepository(ABC):
         failure_start: "datetime | None",
     ) -> None:
         """Atomically update state + anti-flapping counters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def fetch_locked_and_apply(
+        self,
+        service_id: UUID,
+        compute: Callable[["Service"], AlertStateUpdate],
+    ) -> AlertStateUpdate | None:
+        """
+        Atomically within one asyncpg transaction:
+        1. SELECT the service row FOR UPDATE (exclusive row-level lock).
+        2. Call compute(service) synchronously — the FSM runs here, inside the lock.
+        3. Persist AlertStateUpdate.new_state + window counters.
+        Returns the AlertStateUpdate, or None if the service does not exist.
+        """
         raise NotImplementedError

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
 from uuid import UUID
 
 import asyncpg
 
+from app.domain.alerting.state_machine import AlertStateUpdate
 from app.domain.models import Service, ServiceCreate, ServiceState, ServiceType
 from app.domain.ports.service_repository import ServiceRepository
 
@@ -13,6 +15,16 @@ _COLUMNS = (
     "enabled, current_state, created_at, agent_id, "
     "consecutive_failures, consecutive_successes, failure_start"
 )
+
+_SELECT_LOCKED = f"SELECT {_COLUMNS} FROM services WHERE id = $1 FOR UPDATE"
+_UPDATE_ALERT = """
+    UPDATE services
+    SET current_state        = $1,
+        consecutive_failures  = $2,
+        consecutive_successes = $3,
+        failure_start        = $4
+    WHERE id = $5
+"""
 
 
 class PgServiceRepository(ServiceRepository):
@@ -128,3 +140,25 @@ class PgServiceRepository(ServiceRepository):
                 failure_start,
                 service_id,
             )
+
+    async def fetch_locked_and_apply(
+        self,
+        service_id: UUID,
+        compute: Callable[[Service], AlertStateUpdate],
+    ) -> AlertStateUpdate | None:
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                row = await conn.fetchrow(_SELECT_LOCKED, service_id)
+                if row is None:
+                    return None
+                service = self._to_domain(row)
+                update = compute(service)  # synchronous FSM — safe inside transaction
+                await conn.execute(
+                    _UPDATE_ALERT,
+                    update.new_state.value,
+                    update.consecutive_failures,
+                    update.consecutive_successes,
+                    update.failure_start,
+                    service_id,
+                )
+        return update

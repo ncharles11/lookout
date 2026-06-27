@@ -5,6 +5,7 @@ from datetime import timezone
 from app.application.evaluate_alerts import evaluate_alerts
 from app.domain.alerting.sliding_window import WindowConfig
 from app.domain.models import MetricBatch, Observation
+from app.domain.ports.event_publisher import EventPublisher
 from app.domain.ports.metric_repository import MetricRepository
 from app.domain.ports.notifier import Notifier
 from app.domain.ports.service_repository import ServiceRepository
@@ -15,6 +16,7 @@ async def ingest_push_metrics(
     metric_repo: MetricRepository,
     service_repo: ServiceRepository,
     notifier: Notifier,
+    publisher: EventPublisher,
     window_cfg: WindowConfig,
 ) -> None:
     """Persist a push metric batch and signal the FSM that the agent is alive."""
@@ -41,5 +43,6 @@ async def ingest_push_metrics(
         observation=alive_obs,
         service_repo=service_repo,
         notifier=notifier,
+        publisher=publisher,
         window_cfg=window_cfg,
     )

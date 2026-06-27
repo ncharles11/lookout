@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m py_compile app/main.py app/api/v1/ws.py app/api/v1/metrics.py app/infrastructure/ws/hub.py app/infrastructure/prober/scheduler.py app/application/evaluate_alerts.py app/application/run_blackbox_probe.py app/application/ingest_push_metrics.py app/domain/ports/event_publisher.py app/domain/ports/service_repository.py app/domain/alerting/state_machine.py app/infrastructure/db/repositories/pg_service_repository.py)",
+      "Bash(find tests *)",
+      "Bash(python3 -c \"import app.main; import app.api.v1.ws; print\\('IMPORT OK'\\)\")",
+      "Bash(python3 -m pytest tests/ -q)"
+    ]
+  }
+}

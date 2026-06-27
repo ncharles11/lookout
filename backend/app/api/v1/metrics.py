@@ -9,6 +9,7 @@ from app.api.v1.services import get_service_repository
 from app.application.ingest_push_metrics import ingest_push_metrics
 from app.domain.alerting.sliding_window import WindowConfig
 from app.domain.models import MetricBatch
+from app.domain.ports.event_publisher import EventPublisher
 from app.domain.ports.metric_repository import MetricRepository
 from app.domain.ports.notifier import Notifier
 from app.domain.ports.service_repository import ServiceRepository
@@ -38,6 +39,14 @@ def get_window_config() -> WindowConfig:
     raise NotImplementedError("WindowConfig dependency not wired.")
 
 
+def get_publisher() -> EventPublisher:
+    """Dependency provider for the event publisher (WebSocket hub).
+
+    Overridden at application startup via ``app.dependency_overrides``.
+    """
+    raise NotImplementedError("EventPublisher dependency not wired.")
+
+
 router = APIRouter(prefix="/api/v1", tags=["metrics"])
 
 
@@ -51,7 +60,10 @@ async def push_metrics(
     metric_repo: Annotated[MetricRepository, Depends(get_metric_repository)],
     service_repo: Annotated[ServiceRepository, Depends(get_service_repository)],
     notifier: Annotated[Notifier, Depends(get_notifier)],
+    publisher: Annotated[EventPublisher, Depends(get_publisher)],
     window_cfg: Annotated[WindowConfig, Depends(get_window_config)],
 ) -> None:
     """Receive a metric batch from a remote agent."""
-    await ingest_push_metrics(batch, metric_repo, service_repo, notifier, window_cfg)
+    await ingest_push_metrics(
+        batch, metric_repo, service_repo, notifier, publisher, window_cfg
+    )

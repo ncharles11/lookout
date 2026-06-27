@@ -6,6 +6,7 @@ import logging
 from app.application.run_blackbox_probe import run_blackbox_probe
 from app.domain.alerting.sliding_window import WindowConfig
 from app.domain.models import Service
+from app.domain.ports.event_publisher import EventPublisher
 from app.domain.ports.metric_repository import MetricRepository
 from app.domain.ports.notifier import Notifier
 from app.domain.ports.service_repository import ServiceRepository
@@ -29,6 +30,7 @@ class ProbeScheduler:
         concurrency: int,
         notifier: Notifier,
         window_cfg: WindowConfig,
+        publisher: EventPublisher,
     ) -> None:
         self._service_repo = service_repo
         self._metric_repo = metric_repo
@@ -38,6 +40,7 @@ class ProbeScheduler:
         self._stopped = asyncio.Event()
         self._notifier = notifier
         self._window_cfg = window_cfg
+        self._publisher = publisher
 
     async def start(self) -> None:
         """Load enabled services and spawn a probe loop task for each."""
@@ -79,6 +82,7 @@ class ProbeScheduler:
                         metric_repo=self._metric_repo,
                         service_repo=self._service_repo,
                         notifier=self._notifier,
+                        publisher=self._publisher,
                         window_cfg=self._window_cfg,
                     )
             except asyncio.CancelledError:
