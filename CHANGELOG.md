@@ -15,4 +15,9 @@ All notable changes to **Lookout** are documented here.Format follows [Keep a Ch
   - Creation of the initial REST endpoints (`/config/services`, `/services/status`).
   - Implementation of dependency injection for repositories.
 
+## [1.1.0] - 2026-06-27
 
+- **agent:** Implementation of the remote agent ([`0ba19e2a`](https://github.com/ncharles11/lookout/commit/ba19e2aec488a0d1e4112731ee925eb95ef15785))
+  - Addition of Bearer token authentication (agent_keys) on the backend side.
+  - Creation of the ingestion use case and the POST endpoint /metrics/push.
+  - Fix to the scheduler for asynchronous hot-reloading of new target services.
