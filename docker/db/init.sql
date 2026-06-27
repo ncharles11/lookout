@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS metrics (
 
 SELECT create_hypertable('metrics', 'time', if_not_exists => TRUE);
 
+-- Automatically drop raw metrics older than 7 days (prevents disk saturation)
+SELECT add_retention_policy('metrics', INTERVAL '7 days', if_not_exists => TRUE);
+
 -- Helpful indexes for time-series lookups by service
 CREATE INDEX IF NOT EXISTS idx_metrics_service_time
     ON metrics (service_id, metric, time DESC);

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 from datetime import datetime, timezone
 
 from lookout_agent.collectors.containers import collect_container_metrics
@@ -17,7 +18,17 @@ logging.basicConfig(
 logger = logging.getLogger("lookout_agent")
 
 
-async def run_collection_loop(settings: AgentSettings) -> None:
+async def run(settings: AgentSettings) -> None:
+    loop = asyncio.get_running_loop()
+    shutdown = asyncio.Event()
+
+    def _request_shutdown() -> None:
+        if not shutdown.is_set():
+            shutdown.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, _request_shutdown)
+
     transport = MetricTransport(settings)
     logger.info(
         "Agent %s started — pushing to %s every %ds",
@@ -25,7 +36,8 @@ async def run_collection_loop(settings: AgentSettings) -> None:
         settings.BACKEND_URL,
         settings.COLLECT_INTERVAL_S,
     )
-    while True:
+
+    while not shutdown.is_set():
         try:
             metrics = collect_system_metrics()
             if settings.ENABLE_DOCKER:
@@ -40,12 +52,18 @@ async def run_collection_loop(settings: AgentSettings) -> None:
         except Exception:
             logger.exception("Unexpected error in collection loop")
 
-        await asyncio.sleep(settings.COLLECT_INTERVAL_S)
+        # Wait for the next tick — returns early if shutdown is requested
+        try:
+            await asyncio.wait_for(shutdown.wait(), timeout=settings.COLLECT_INTERVAL_S)
+        except asyncio.TimeoutError:
+            pass
+
+    logger.info("Agent shutting down...")
 
 
 def main() -> None:
     settings = AgentSettings()
-    asyncio.run(run_collection_loop(settings))
+    asyncio.run(run(settings))
 
 
 if __name__ == "__main__":

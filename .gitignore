@@ -20,3 +20,5 @@ venv/
 
 # Docker volumes (if mounted locally)
 pgdata/
+
+node_modules/
