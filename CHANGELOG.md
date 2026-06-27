@@ -38,8 +38,18 @@ All notable changes to **Lookout** are documented here.Format follows [Keep a Ch
 ## [1.3.0] - 2026-06-27
 
 ### Dashboard, HUD, and Real-Time
+
 - **ui:** Real-time HUD dashboard, WebSockets, and reverse proxy ([`0c740338`](https://github.com/ncharles11/lookout/commit/c740338eae9ee4c44e85cbb77a545e0db39e2d93))
   - Creation of the WebSocket backend hub (snapshot + state_change).
   - Initialization of the Vite + React + shadcn/ui frontend (dark cyberpunk theme).
   - Reactive dashboard component connected to the WebSocket stream.
   - Implementation of Caddy as a global reverse proxy.
+
+## [1.4.0] - 2026-06-27
+
+### Packaging and Zero Config Experience
+
+- **release:** Global packaging, data retention ([`09195811`](https://github.com/ncharles11/lookout/commit/91958113ac04752a355c71b5f38d2edbede870cb))
+  - Implemented the install.sh script for “zero-configuration” deployment with a single command.
+  - Configured the native TimescaleDB retention policy (7 days) in init.sql to prevent disk saturation.
+  - Added graceful shutdown to the Python agent (signal handling for a clean shutdown).
