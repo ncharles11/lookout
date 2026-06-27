@@ -1,0 +1,36 @@
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: lookout-db
+    environment:
+      POSTGRES_DB: lookout
+      POSTGRES_USER: lookout
+      POSTGRES_PASSWORD: lookout
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lookout -d lookout"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: lookout-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://lookout:lookout@db:5432/lookout
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+
+volumes:
+  pgdata:
