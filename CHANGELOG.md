@@ -26,7 +26,7 @@ All notable changes to **Lookout** are documented here.Format follows [Keep a Ch
 
 ## [1.2.0] - 2026-06-27
 
-## Brain and Anti-Flapping
+### Brain and Anti-Flapping
 
 - **alerting:** Implementation of the anti-flapping engine and notifications ([`0f93f6c0`](https://github.com/ncharles11/lookout/commit/f93f6c0343e44d2d9328e1ac9c676b7b81ee1d55))
   - Creation of a 100% pure domain for alerting (FSM, sliding window, hysteresis).
@@ -34,3 +34,12 @@ All notable changes to **Lookout** are documented here.Format follows [Keep a Ch
   - Implemented the DiscordWebhookNotifier for sending enriched alerts.
   - Wired the evaluate_alerts use case to the blackbox (prober) and whitebox (agent) streams.
   - Added 12 synchronous unit tests to validate the anti-flapping logic.
+
+## [1.3.0] - 2026-06-27
+
+### Dashboard, HUD, and Real-Time
+- **ui:** Real-time HUD dashboard, WebSockets, and reverse proxy ([`0c740338`](https://github.com/ncharles11/lookout/commit/c740338eae9ee4c44e85cbb77a545e0db39e2d93))
+  - Creation of the WebSocket backend hub (snapshot + state_change).
+  - Initialization of the Vite + React + shadcn/ui frontend (dark cyberpunk theme).
+  - Reactive dashboard component connected to the WebSocket stream.
+  - Implementation of Caddy as a global reverse proxy.
