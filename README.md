@@ -137,8 +137,8 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
-    SERVICES ||--o{ METRICS : logs}
-    SERVICES ||--o{ AGENT_KEYS : has}
+    SERVICES ||--o{ METRICS : logs
+    SERVICES ||--o{ AGENT_KEYS : has
 
     SERVICES {
         uuid id PK
@@ -166,7 +166,7 @@ erDiagram
 
     AGENT_KEYS {
         uuid id PK
-        text agent_id UNIQUE
+        text agent_id UK
         text key_hash "sha256"
         timestamptz created_at
         timestamptz revoked_at
