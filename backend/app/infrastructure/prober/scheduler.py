@@ -44,6 +44,23 @@ class ProbeScheduler:
             self._tasks.append(task)
         logger.info("Started %d probe loop(s)", len(self._tasks))
 
+    async def add_service(self, service: Service) -> None:
+        """Dynamically add a probe loop for a newly registered service.
+
+        Push-type services are skipped: they report metrics inbound rather than
+        being actively probed.
+        """
+        if not service.enabled or service.type.value == "push":
+            return
+        task = asyncio.create_task(
+            self._run_loop(service),
+            name=f"probe-loop:{service.id}",
+        )
+        self._tasks.append(task)
+        logger.info(
+            "Hot-added probe loop for service %s (%s)", service.name, service.id
+        )
+
     async def _run_loop(self, service: Service) -> None:
         """Probe a service forever, sleeping ``interval_s`` between cycles."""
         interval = max(service.interval_s, 1)

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
+from uuid import UUID
 
 import asyncpg
 
-from app.domain.models import Observation
+from app.domain.models import AgentMetric, Observation
 from app.domain.ports.metric_repository import MetricRepository
 
 _INSERT_METRIC = """
@@ -35,5 +37,19 @@ class PgMetricRepository(MetricRepository):
             ),
         ]
 
+        async with self._pool.acquire() as conn:
+            await conn.executemany(_INSERT_METRIC, rows)
+
+    async def save_agent_batch(
+        self,
+        service_id: UUID,
+        batch_time: datetime,
+        metrics: list[AgentMetric],
+    ) -> None:
+        """Persist a batch of agent metrics as one metric row each."""
+        rows = [
+            (batch_time, service_id, m.name, m.value, json.dumps(m.labels))
+            for m in metrics
+        ]
         async with self._pool.acquire() as conn:
             await conn.executemany(_INSERT_METRIC, rows)

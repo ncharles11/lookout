@@ -28,3 +28,13 @@ class ServiceRepository(ABC):
     async def update_state(self, service_id: UUID, state: ServiceState) -> None:
         """Update the ``current_state`` of the given service."""
         raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_agent_id(self, agent_id: str) -> Service | None:
+        """Return the push service bound to ``agent_id``, or None if absent."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def upsert_push_service(self, agent_id: str) -> Service:
+        """Create or return the push service for ``agent_id`` (idempotent)."""
+        raise NotImplementedError

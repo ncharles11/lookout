@@ -12,6 +12,7 @@ class ServiceType(str, Enum):
 
     HTTP = "http"
     TCP = "tcp"
+    PUSH = "push"  # whitebox: metrics pushed in by a remote agent, not probed
 
 
 class ServiceState(str, Enum):
@@ -60,3 +61,19 @@ class ServiceCreate(BaseModel):
     interval_s: int = 60
     expected_status: int | None = 200
     enabled: bool = True
+
+
+class AgentMetric(BaseModel):
+    """A single named measurement reported by a remote (whitebox) agent."""
+
+    name: str  # e.g. "cpu_percent"
+    value: float
+    labels: dict[str, str | float | int | None] = {}
+
+
+class MetricBatch(BaseModel):
+    """A batch of agent metrics pushed in a single ingestion request."""
+
+    agent_id: str
+    timestamp: datetime
+    metrics: list[AgentMetric]

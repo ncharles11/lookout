@@ -70,3 +70,24 @@ class PgServiceRepository(ServiceRepository):
         query = "UPDATE services SET current_state = $1 WHERE id = $2"
         async with self._pool.acquire() as conn:
             await conn.execute(query, state.value, service_id)
+
+    async def get_by_agent_id(self, agent_id: str) -> Service | None:
+        query = f"SELECT {_COLUMNS} FROM services WHERE agent_id = $1"
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(query, agent_id)
+        return self._to_domain(row) if row else None
+
+    async def upsert_push_service(self, agent_id: str) -> Service:
+        query = f"""
+            INSERT INTO services (name, type, agent_id, enabled, interval_s)
+            VALUES ($1, 'push', $2, TRUE, 0)
+            ON CONFLICT (agent_id) DO UPDATE SET name = EXCLUDED.name
+            RETURNING {_COLUMNS}
+        """
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(query, f"agent:{agent_id}", agent_id)
+        if row is None:
+            raise RuntimeError(
+                f"Failed to upsert push service for agent {agent_id}"
+            )
+        return self._to_domain(row)

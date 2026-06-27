@@ -136,5 +136,5 @@ ignore_tags = ""
 sort_commits = "newest"
 
 [remote.github]
-owner = "charlesaugustendiaye"
+owner = "ncharles11"
 repo  = "lookout"

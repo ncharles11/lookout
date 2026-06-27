@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, TypedDict
+from typing import AsyncIterator
+from typing_extensions import TypedDict
 
 from fastapi import FastAPI
 
+from app.api.v1 import metrics as metrics_api
 from app.api.v1 import services as services_api
 from app.config import get_settings
 from app.infrastructure.db.repositories.pg_metric_repository import PgMetricRepository
@@ -43,10 +45,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         concurrency=settings.PROBE_CONCURRENCY,
     )
 
-    # Wire the concrete repository into the API layer via dependency override.
+    # Wire the concrete adapters into the API layer via dependency overrides.
     app.dependency_overrides[services_api.get_service_repository] = (
         lambda: service_repo
     )
+    app.dependency_overrides[metrics_api.get_metric_repository] = (
+        lambda: metric_repo
+    )
+    app.dependency_overrides[services_api.get_scheduler] = lambda: scheduler
 
     await scheduler.start()
     logger.info("Lookout backend started")
@@ -63,6 +69,7 @@ def create_app() -> FastAPI:
     """Application factory."""
     app = FastAPI(title="Lookout", version="0.1.0", lifespan=lifespan)
     app.include_router(services_api.router)
+    app.include_router(metrics_api.router)
 
     @app.get("/health")
     async def health() -> HealthResponse:
