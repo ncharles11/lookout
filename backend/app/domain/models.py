@@ -20,7 +20,10 @@ class ServiceState(str, Enum):
 
     UNKNOWN = "UNKNOWN"
     UP = "UP"
-    DOWN = "DOWN"
+    DOWN = "DOWN"  # keep for backward compat; FSM won't produce it
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+    RESOLVED = "RESOLVED"
 
 
 class Service(BaseModel):
@@ -37,6 +40,10 @@ class Service(BaseModel):
     enabled: bool = True
     current_state: ServiceState = ServiceState.UNKNOWN
     created_at: datetime
+    # Anti-flapping window state (persisted in DB)
+    consecutive_failures: int = 0
+    consecutive_successes: int = 0
+    failure_start: datetime | None = None
 
 
 class Observation(BaseModel):

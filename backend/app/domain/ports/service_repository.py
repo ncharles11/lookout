@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from uuid import UUID
 
 from app.domain.models import Service, ServiceCreate, ServiceState
@@ -37,4 +38,21 @@ class ServiceRepository(ABC):
     @abstractmethod
     async def upsert_push_service(self, agent_id: str) -> Service:
         """Create or return the push service for ``agent_id`` (idempotent)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_id(self, service_id: UUID) -> "Service | None":
+        """Fetch a service by primary key, including its window state."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_alert_state(
+        self,
+        service_id: UUID,
+        new_state: "ServiceState",
+        consecutive_failures: int,
+        consecutive_successes: int,
+        failure_start: "datetime | None",
+    ) -> None:
+        """Atomically update state + anti-flapping counters."""
         raise NotImplementedError

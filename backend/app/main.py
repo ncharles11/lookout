@@ -3,18 +3,19 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
-from typing_extensions import TypedDict
 
 from fastapi import FastAPI
+from typing_extensions import TypedDict
 
 from app.api.v1 import metrics as metrics_api
 from app.api.v1 import services as services_api
 from app.config import get_settings
+from app.domain.alerting.sliding_window import WindowConfig
 from app.infrastructure.db.repositories.pg_metric_repository import PgMetricRepository
-from app.infrastructure.db.repositories.pg_service_repository import (
-    PgServiceRepository,
-)
+from app.infrastructure.db.repositories.pg_service_repository import PgServiceRepository
 from app.infrastructure.db.session import close_pool, get_pool, init_pool
+from app.infrastructure.notifiers.noop_notifier import NoOpNotifier
+from app.infrastructure.notifiers.webhook_discord import DiscordWebhookNotifier
 from app.infrastructure.prober.http_tcp_prober import HttpTcpProber
 from app.infrastructure.prober.scheduler import ProbeScheduler
 
@@ -38,21 +39,32 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     service_repo = PgServiceRepository(pool)
     prober = HttpTcpProber()
 
+    notifier = (
+        DiscordWebhookNotifier(settings.DISCORD_WEBHOOK_URL)
+        if settings.DISCORD_WEBHOOK_URL
+        else NoOpNotifier()
+    )
+    window_cfg = WindowConfig(
+        consecutive_failures_to_alert=settings.ALERT_CONSECUTIVE_FAILURES,
+        failure_duration_s=settings.ALERT_FAILURE_DURATION_S,
+        consecutive_successes_to_resolve=settings.ALERT_CONSECUTIVE_SUCCESSES,
+    )
+
     scheduler = ProbeScheduler(
         service_repo=service_repo,
         metric_repo=metric_repo,
         prober=prober,
         concurrency=settings.PROBE_CONCURRENCY,
+        notifier=notifier,
+        window_cfg=window_cfg,
     )
 
     # Wire the concrete adapters into the API layer via dependency overrides.
-    app.dependency_overrides[services_api.get_service_repository] = (
-        lambda: service_repo
-    )
-    app.dependency_overrides[metrics_api.get_metric_repository] = (
-        lambda: metric_repo
-    )
-    app.dependency_overrides[services_api.get_scheduler] = lambda: scheduler
+    app.dependency_overrides[services_api.get_service_repository] = lambda: service_repo
+    app.dependency_overrides[services_api.get_scheduler]          = lambda: scheduler
+    app.dependency_overrides[metrics_api.get_metric_repository]   = lambda: metric_repo
+    app.dependency_overrides[metrics_api.get_notifier]            = lambda: notifier
+    app.dependency_overrides[metrics_api.get_window_config]       = lambda: window_cfg
 
     await scheduler.start()
     logger.info("Lookout backend started")

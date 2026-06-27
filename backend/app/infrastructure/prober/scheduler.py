@@ -4,8 +4,10 @@ import asyncio
 import logging
 
 from app.application.run_blackbox_probe import run_blackbox_probe
+from app.domain.alerting.sliding_window import WindowConfig
 from app.domain.models import Service
 from app.domain.ports.metric_repository import MetricRepository
+from app.domain.ports.notifier import Notifier
 from app.domain.ports.service_repository import ServiceRepository
 from app.infrastructure.prober.http_tcp_prober import HttpTcpProber
 
@@ -25,6 +27,8 @@ class ProbeScheduler:
         metric_repo: MetricRepository,
         prober: HttpTcpProber,
         concurrency: int,
+        notifier: Notifier,
+        window_cfg: WindowConfig,
     ) -> None:
         self._service_repo = service_repo
         self._metric_repo = metric_repo
@@ -32,6 +36,8 @@ class ProbeScheduler:
         self._semaphore = asyncio.Semaphore(concurrency)
         self._tasks: list[asyncio.Task[None]] = []
         self._stopped = asyncio.Event()
+        self._notifier = notifier
+        self._window_cfg = window_cfg
 
     async def start(self) -> None:
         """Load enabled services and spawn a probe loop task for each."""
@@ -67,19 +73,14 @@ class ProbeScheduler:
         while not self._stopped.is_set():
             try:
                 async with self._semaphore:
-                    obs = await run_blackbox_probe(
+                    await run_blackbox_probe(
                         service=service,
                         prober=self._prober,
                         metric_repo=self._metric_repo,
                         service_repo=self._service_repo,
+                        notifier=self._notifier,
+                        window_cfg=self._window_cfg,
                     )
-                logger.debug(
-                    "Probed %s (%s): up=%s latency=%.1fms",
-                    service.name,
-                    service.id,
-                    obs.is_up,
-                    obs.latency_ms,
-                )
             except asyncio.CancelledError:
                 raise
             except Exception:  # noqa: BLE001 - never let a loop die on a transient error

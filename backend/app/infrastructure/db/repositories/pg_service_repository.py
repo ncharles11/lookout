@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 import asyncpg
@@ -9,7 +10,8 @@ from app.domain.ports.service_repository import ServiceRepository
 
 _COLUMNS = (
     "id, name, type, target, interval_s, expected_status, "
-    "enabled, current_state, created_at"
+    "enabled, current_state, created_at, agent_id, "
+    "consecutive_failures, consecutive_successes, failure_start"
 )
 
 
@@ -32,6 +34,9 @@ class PgServiceRepository(ServiceRepository):
             enabled=row["enabled"],
             current_state=ServiceState(row["current_state"]),
             created_at=row["created_at"],
+            consecutive_failures=row["consecutive_failures"],
+            consecutive_successes=row["consecutive_successes"],
+            failure_start=row["failure_start"],
         )
 
     async def get_all_enabled(self) -> list[Service]:
@@ -91,3 +96,35 @@ class PgServiceRepository(ServiceRepository):
                 f"Failed to upsert push service for agent {agent_id}"
             )
         return self._to_domain(row)
+
+    async def get_by_id(self, service_id: UUID) -> Service | None:
+        query = f"SELECT {_COLUMNS} FROM services WHERE id = $1"
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(query, service_id)
+        return self._to_domain(row) if row else None
+
+    async def update_alert_state(
+        self,
+        service_id: UUID,
+        new_state: ServiceState,
+        consecutive_failures: int,
+        consecutive_successes: int,
+        failure_start: datetime | None,
+    ) -> None:
+        query = """
+            UPDATE services
+            SET current_state        = $1,
+                consecutive_failures  = $2,
+                consecutive_successes = $3,
+                failure_start        = $4
+            WHERE id = $5
+        """
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                query,
+                new_state.value,
+                consecutive_failures,
+                consecutive_successes,
+                failure_start,
+                service_id,
+            )

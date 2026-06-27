@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://lookout:lookout@localhost:5432/lookout"
     PROBE_CONCURRENCY: int = 10
 
+    # Alerting — Discord webhook (optional)
+    DISCORD_WEBHOOK_URL: str | None = None
+
+    # Anti-flapping window defaults
+    ALERT_CONSECUTIVE_FAILURES: int = 3
+    ALERT_FAILURE_DURATION_S: float = 60.0
+    ALERT_CONSECUTIVE_SUCCESSES: int = 2
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

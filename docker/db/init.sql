@@ -3,16 +3,19 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 -- Services table
 CREATE TABLE IF NOT EXISTS services (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name             TEXT NOT NULL,
-    type             TEXT NOT NULL,          -- 'http' or 'tcp'
-    target           TEXT,
-    interval_s       INT NOT NULL DEFAULT 60,
-    expected_status  INT,
-    enabled          BOOLEAN NOT NULL DEFAULT TRUE,
-    current_state    TEXT NOT NULL DEFAULT 'UNKNOWN',
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    agent_id         TEXT UNIQUE   -- null for blackbox services; set for push/agent services
+    id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    name                 TEXT        NOT NULL,
+    type                 TEXT        NOT NULL,          -- 'http' or 'tcp'
+    target               TEXT,
+    interval_s           INT         NOT NULL DEFAULT 60,
+    expected_status      INT,
+    enabled              BOOLEAN     NOT NULL DEFAULT TRUE,
+    current_state        TEXT        NOT NULL DEFAULT 'UNKNOWN',
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    agent_id             TEXT        UNIQUE,   -- null for blackbox services; set for push/agent services
+    consecutive_failures  INT        NOT NULL DEFAULT 0,
+    consecutive_successes INT        NOT NULL DEFAULT 0,
+    failure_start        TIMESTAMPTZ
 );
 
 -- Metrics hypertable
